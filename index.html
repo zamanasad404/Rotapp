@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>RotaWave — Team Rota PWA</title>
+  <meta name="description" content="Create and share team rotas. Staff can claim shifts. Table or Gantt view. Export via WhatsApp as PDF or text.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <meta name="theme-color" content="#6C5CE7">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&vault=true&intent=subscription" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <img src="icons/icon-192.png" alt="logo" class="logo">
+      <h1>RotaWave</h1>
+    </div>
+  </header>
+
+  <main class="screen">
+    <section class="card card-auth" id="authSection">
+      <h2>Workspace & sign-in</h2>
+      <p class="muted">Create a team workspace code and sign in as manager or staff. <b>Note:</b> The PIN is <i>local to this device</i> in this demo. Use Backup/Restore to move data between devices, or connect a backend later for true accounts.</p>
+      <div class="grid-2">
+        <label>Workspace code (e.g. novare-team)
+          <input id="workspaceInput" placeholder="novare-team" />
+        </label>
+        <label>Your display name
+          <input id="displayNameInput" placeholder="Zaman" />
+        </label>
+      </div>
+      <div class="grid-2">
+        <label>Role
+          <select id="roleSelect">
+            <option value="manager">Manager</option>
+            <option value="staff">Staff</option>
+          </select>
+        </label>
+        <label>Local PIN (this device only)
+          <input id="pinInput" type="password" placeholder="****" />
+        </label>
+      </div>
+      <div class="actions">
+        <button id="signInBtn" class="btn primary">Enter workspace</button>
+      </div>
+    </section>
+
+    <section class="card" id="managerSection" hidden>
+      <div class="card-head">
+        <h2>Manager tools</h2>
+        <div class="pill">Free tier: up to <b>15 staff</b>. <button id="upgradeBtn" class="btn tiny">Upgrade (£50/mo)</button></div>
+      </div>
+
+      <div class="subsection">
+        <h3>Roles</h3>
+        <div class="grid-3">
+          <label>Add role <input id="roleInput" placeholder="Supervisor / Team Leader"></label>
+          <div class="actions-inline">
+            <button id="addRoleBtn" class="btn">Add role</button>
+            <button id="resetRolesBtn" class="btn ghost danger">Reset defaults</button>
+          </div>
+        </div>
+        <div id="roleList" class="chips"></div>
+      </div>
+
+      <div class="subsection">
+        <h3>Create shift</h3>
+        <div class="grid-4">
+          <label>Date <input type="date" id="shiftDate"></label>
+          <label>Start <input type="time" id="shiftStart" value="09:00"></label>
+          <label>End <input type="time" id="shiftEnd" value="17:00"></label>
+          <label>Role
+            <select id="shiftRole"></select>
+          </label>
+          <label>Location <input id="shiftLocation" placeholder="Ward A / Store / Office"></label>
+          <label>Notes <input id="shiftNotes" placeholder="e.g., keys in locker"></label>
+          <label>Slots <input id="shiftSlots" type="number" min="1" value="1"></label>
+          <div class="actions-inline">
+            <button id="addShiftBtn" class="btn primary">Add to open shifts</button>
+            <button id="clearShiftsBtn" class="btn danger ghost">Clear all</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <h3>Open shifts (tap to assign)</h3>
+        <div id="openShifts" class="kanban"></div>
+      </div>
+
+      <div class="subsection">
+        <h3>Team</h3>
+        <div class="grid-3">
+          <label>Add staff name <input id="staffNameInput" placeholder="e.g., Aisha Khan"></label>
+          <div class="actions-inline">
+            <button id="addStaffBtn" class="btn">Add</button>
+            <button id="removeAllStaffBtn" class="btn ghost danger">Remove all</button>
+          </div>
+        </div>
+        <div id="staffList" class="chips"></div>
+      </div>
+
+      <div class="subsection">
+        <h3>Backup / Restore</h3>
+        <div class="actions-inline">
+          <button id="exportWorkspaceBtn" class="btn">Export workspace JSON</button>
+          <label class="btn ghost" for="importWorkspaceInput">Import JSON</label>
+          <input id="importWorkspaceInput" type="file" accept="application/json" hidden />
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="staffSection" hidden>
+      <div class="card-head">
+        <h2>Available shifts</h2>
+        <div class="pill">Tap a shift for details & location. Swipe sideways to browse days.</div>
+      </div>
+      <div id="staffOpenShifts" class="kanban"></div>
+    </section>
+
+    <section class="card" id="rotaSection" hidden>
+      <div class="card-head row-between">
+        <h2>Rota</h2>
+        <div class="view-switch">
+          <button data-view="table" class="btn tiny view-btn active">Table</button>
+          <button data-view="gantt" class="btn tiny view-btn">Gantt</button>
+        </div>
+      </div>
+
+      <div class="subsection row-between">
+        <div class="range">
+          <button id="prevWeek" class="btn ghost swipe-hint">◀</button>
+          <div id="weekLabel" class="week-label"></div>
+          <button id="nextWeek" class="btn ghost swipe-hint">▶</button>
+        </div>
+        <div class="actions-inline">
+          <button id="exportTextBtn" class="btn">Export text</button>
+          <button id="exportPdfBtn" class="btn">Export PDF/image</button>
+          <button id="shareWA" class="btn success">Share via WhatsApp</button>
+        </div>
+      </div>
+
+      <div id="rotaTableView" class="rota-table-wrapper"></div>
+      <div id="rotaGanttView" class="rota-gantt-wrapper" hidden></div>
+    </section>
+
+    <dialog id="assignDialog">
+      <h3>Assign shift</h3>
+      <p class="muted">Choose a staff member to assign to this shift.</p>
+      <label>Staff
+        <select id="assignSelect"></select>
+      </label>
+      <div class="actions">
+        <button class="btn" id="assignConfirm">Assign</button>
+        <button class="btn ghost" id="assignCancel">Cancel</button>
+      </div>
+    </dialog>
+
+    <dialog id="upgradeModal" class="modal">
+      <h3>Upgrade to Pro</h3>
+      <p>Unlimited staff and advanced exports. £50/month via PayPal subscription.</p>
+      <div id="paypal-button-container"></div>
+      <div class="actions">
+        <button class="btn ghost" id="closeUpgrade">Close</button>
+      </div>
+    </dialog>
+  </main>
+
+  <footer class="app-footer">
+    <small>© 2025 RotaWave by Novare Apps • PWA • Offline-ready</small>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
